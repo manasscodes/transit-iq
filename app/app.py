@@ -8,16 +8,23 @@ st.set_page_config(
     layout="centered"
 )
 
-st.title("🚌 TransitIQ")
-st.write("AI-Powered Transit Delay Intelligence")
+@st.cache_resource
+def load_model():
+    return joblib.load("models/transit_iq_classifier.pkl")
 
-# Load model safely
-try:
-    model = joblib.load("models/transit_iq_classifier.pkl")
-    st.success("Model loaded successfully")
-except Exception as e:
-    st.error(f"Model loading failed: {e}")
-    st.stop()
+model = load_model()
+
+st.title("🚌 TransitIQ")
+st.subheader("AI-Powered Public Transport Delay Predictor")
+
+st.write(
+    """
+Predict the probability that a public transport trip will be delayed
+based on weather, traffic, event, and scheduling information.
+"""
+)
+
+st.markdown("---")
 
 transport_type = st.selectbox(
     "Transport Type",
@@ -31,9 +38,28 @@ weather_condition = st.selectbox(
 
 traffic_congestion = st.slider(
     "Traffic Congestion Index",
-    0,
-    100,
-    50
+    min_value=0,
+    max_value=100,
+    value=50
+)
+
+temperature = st.slider(
+    "Temperature (°C)",
+    min_value=-5,
+    max_value=40,
+    value=20
+)
+
+trip_duration = st.slider(
+    "Scheduled Trip Duration (minutes)",
+    min_value=5,
+    max_value=120,
+    value=45
+)
+
+season = st.selectbox(
+    "Season",
+    ["Spring", "Summer", "Autumn", "Winter"]
 )
 
 if st.button("Predict Delay"):
@@ -44,7 +70,7 @@ if st.button("Predict Delay"):
         "origin_station": ["Station_1"],
         "destination_station": ["Station_2"],
         "weather_condition": [weather_condition],
-        "temperature_C": [20],
+        "temperature_C": [temperature],
         "humidity_percent": [70],
         "wind_speed_kmh": [15],
         "precipitation_mm": [5],
@@ -54,31 +80,39 @@ if st.button("Predict Delay"):
         "holiday": [0],
         "peak_hour": [1],
         "weekday": [2],
-        "season": ["Winter"],
+        "season": [season],
         "day": [10],
         "day_of_week": [2],
         "is_weekend": [0],
         "departure_hour": [8],
         "departure_minute": [15],
         "arrival_hour": [9],
-        "scheduled_trip_duration": [45]
+        "scheduled_trip_duration": [trip_duration]
     })
 
-    try:
-        prediction = model.predict(sample)[0]
-        probability = model.predict_proba(sample)[0][1]
+    prediction = model.predict(sample)[0]
+    probability = model.predict_proba(sample)[0][1]
 
-        st.metric(
-            "Delay Probability",
-            f"{probability:.1%}"
-        )
+    st.metric(
+        "Delay Probability",
+        f"{probability:.1%}"
+    )
 
-        if probability >= 0.75:
-            st.error("🔴 High Delay Risk")
-        elif probability >= 0.50:
-            st.warning("🟡 Medium Delay Risk")
-        else:
-            st.success("🟢 Low Delay Risk")
+    if probability >= 0.75:
+        st.error("🔴 High Delay Risk")
+    elif probability >= 0.50:
+        st.warning("🟡 Medium Delay Risk")
+    else:
+        st.success("🟢 Low Delay Risk")
 
-    except Exception as e:
-        st.error(f"Prediction failed: {e}")
+    st.subheader("Prediction Details")
+
+    st.write(
+        f"Model Prediction: {'Delayed' if prediction == 1 else 'On Time'}"
+    )
+
+st.markdown("---")
+
+st.caption(
+    "TransitIQ • Machine Learning Project • Built with Streamlit & Scikit-Learn"
+)
