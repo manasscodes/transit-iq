@@ -18,6 +18,8 @@ models/*.pkl
 
 # Processed Data
 data/processed/*
+data/raw/*
+!data/raw/.gitkeep
 
 # Secrets
 .env
